@@ -1,291 +1,540 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-Hant" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>實驗室指南：使用 BigQuery 與 Cloud Logging 分析 BigQuery 使用情況</title>
+    <title>BigQuery: 雲端原生資料倉儲與分析</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', 'Noto Sans TC', sans-serif;
-            background-color: #111827; /* bg-gray-900 */
-            color: #d1d5db; /* text-gray-300 */
         }
-        h1, h2, h3 {
-            font-weight: 700;
-            color: #f9fafb; /* text-gray-50 */
+        .code-block-container {
+            background-color: #1a202c; /* gray-900 */
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         }
-        code {
-            background-color: #374151; /* bg-gray-700 */
-            color: #e5e7eb; /* text-gray-200 */
-            padding: 0.2em 0.4em;
-            margin: 0;
-            font-size: 0.9em;
-            border-radius: 0.3rem;
+        .code-block-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #2d3748; /* gray-800 */
+            padding: 0.5rem 1rem;
+            border-top-left-radius: 0.75rem;
+            border-top-right-radius: 0.75rem;
+            border-bottom: 1px solid #4a5568; /* gray-700 */
         }
-        pre {
-            background-color: #1f2937; /* bg-gray-800 */
-            border: 1px solid #4b5563; /* border-gray-600 */
-            border-radius: 0.5rem;
-            padding: 1rem;
-            position: relative;
-            overflow-x: auto;
+        .code-block-title {
+            color: #a0aec0; /* gray-400 */
+            font-size: 0.875rem;
+            font-family: 'Courier New', Courier, monospace;
         }
-        pre code {
-            background-color: transparent;
-            padding: 0;
-            margin: 0;
-            font-size: 1em;
-        }
-        .copy-btn {
-            position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-            background-color: #4b5563; /* bg-gray-600 */
-            color: #e5e7eb; /* text-gray-200 */
+        .copy-button {
+            background-color: #4a5568; /* gray-600 */
+            color: #e2e8f0; /* gray-200 */
             border: none;
-            padding: 0.3rem 0.6rem;
-            border-radius: 0.3rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.375rem;
             cursor: pointer;
-            font-size: 0.8rem;
+            font-size: 0.875rem;
             transition: background-color 0.2s;
         }
-        .copy-btn:hover {
-            background-color: #6b7280; /* bg-gray-500 */
+        .copy-button:hover {
+            background-color: #718096; /* gray-500 */
         }
-        .mermaid {
-            background-color: #1f2937; /* bg-gray-800 */
-            border-radius: 0.5rem;
+        .code-block {
+            color: #e2e8f0; /* gray-300 */
             padding: 1rem;
-            display: flex;
-            justify-content: center;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .code-block pre {
+            margin: 0;
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1);
+        }
+        .nav-link {
+            transition: color 0.2s, border-bottom-color 0.2s;
+        }
+        .nav-link.active {
+            color: #2563eb; /* blue-600 */
+            border-bottom-color: #2563eb;
         }
     </style>
 </head>
-<body class="antialiased">
-    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+<body class="bg-gray-50 text-gray-800">
 
-        <header class="mb-8 text-center">
-            <h1 class="text-3xl md:text-4xl font-bold mb-2 text-cyan-400">實驗室指南 📊</h1>
-            <p class="text-xl text-gray-200">使用 BigQuery 與 Cloud Logging 分析 BigQuery 使用情況</p>
-            <p class="mt-4 text-gray-400">本指南將引導您如何利用 Cloud Logging 來檢視 BigQuery 的使用日誌，並設定一個匯出槽 (sink)，將這些日誌永久儲存到 BigQuery 中進行長期分析。</p>
+    <!-- Sticky Navigation -->
+    <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-lg shadow-md">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-center items-center h-16">
+                <div class="flex space-x-4 md:space-x-8 text-sm md:text-base overflow-x-auto whitespace-nowrap">
+                    <a href="#slide1" class="nav-link text-gray-600 hover:text-blue-600 font-medium border-b-2 border-transparent pb-1">架構</a>
+                    <a href="#slide3" class="nav-link text-gray-600 hover:text-blue-600 font-medium border-b-2 border-transparent pb-1">分析</a>
+                    <a href="#slide6" class="nav-link text-gray-600 hover:text-blue-600 font-medium border-b-2 border-transparent pb-1">載入</a>
+                    <a href="#datamanagement" class="nav-link text-gray-600 hover:text-blue-600 font-medium border-b-2 border-transparent pb-1">管理</a>
+                    <a href="#slide7" class="nav-link text-gray-600 hover:text-blue-600 font-medium border-b-2 border-transparent pb-1">效能</a>
+                    <a href="#slide12" class="nav-link text-gray-600 hover:text-blue-600 font-medium border-b-2 border-transparent pb-1">成本</a>
+                    <a href="#slide13" class="nav-link text-gray-600 hover:text-blue-600 font-medium border-b-2 border-transparent pb-1">Slots</a>
+                    <a href="#biml" class="nav-link text-gray-600 hover:text-blue-600 font-medium border-b-2 border-transparent pb-1">BQML</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-16">
+            <h1 class="text-4xl md:text-5xl font-bold text-blue-600">BigQuery: 雲端原生資料倉儲與分析</h1>
+            <p class="mt-4 text-lg text-gray-600">一份深入淺出的網頁指南，帶您了解 BigQuery 的強大功能與應用</p>
+            <div class="mt-8">
+                <a href="https://linkgitdata.github.io/bigqueryforaudit/" target="_blank" rel="noopener noreferrer" class="inline-block bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-blue-700 transition-transform transform hover:-translate-y-1">
+                    前往 BigQuery 稽核實作 Lab
+                </a>
+            </div>
         </header>
 
-        <section class="mb-12">
-            <h2 class="text-2xl font-bold mb-4 border-l-4 border-cyan-400 pl-4">實驗流程圖</h2>
-            <div class="mermaid">
-                graph TD
-                    A[🚀 任務 3: 在 BigQuery 中執行查詢以產生日誌] --> B[📝 任務 4: 前往 Cloud Logging 尋找日誌];
-                    B --> C[🔧 任務 4: 建立匯出槽(Sink)將日誌匯出至 BigQuery];
-                    C --> D[🔄 任務 5: 執行更多範例查詢以產生新日誌];
-                    D --> E[👁️ 任務 6: 回到 BigQuery 檢視匯入的日誌];
-                    E --> F[✨ 任務 6: 建立一個 VIEW 來簡化日誌資料];
-                    F --> G[📈 任務 6: 查詢 VIEW 以分析使用情況];
-            </div>
-        </section>
+        <div class="space-y-12">
 
-        <hr class="border-gray-700 my-8">
-
-        <section class="mb-12">
-            <h2 class="text-2xl font-bold mb-4 border-l-4 border-cyan-400 pl-4">任務 1 & 2：前置作業與建立資料集</h2>
-            <p class="mb-4 text-gray-400">首先，我們需要一個地方來存放從 Cloud Logging 匯出的日誌。</p>
-            <div class="space-y-4">
-                <div>
-                    <h3 class="text-xl font-semibold mb-2">1. 開啟 BigQuery</h3>
-                    <p>在 Google Cloud Console 中，透過導覽選單 (<strong>Navigation menu</strong>) 進入 <strong>BigQuery</strong>。</p>
-                </div>
-                <div>
-                    <h3 class="text-xl font-semibold mb-2">2. 建立資料集 (Dataset)</h3>
-                    <ol class="list-decimal list-inside space-y-2 pl-4 text-gray-300">
-                        <li>在 <strong>Explorer</strong> 面板中，找到您的專案 (名稱以 <code>qwiklabs-gcp-</code> 開頭)，點擊旁邊的三個點。</li>
-                        <li>選擇 <strong>Create dataset</strong>。</li>
-                        <li>設定 <strong>Dataset ID</strong> 為 <code>bq_logs</code>。</li>
-                        <li>點擊 <strong>Create Dataset</strong>。</li>
-                    </ol>
-                </div>
-            </div>
-        </section>
-
-        <hr class="border-gray-700 my-8">
-
-        <section class="mb-12">
-            <h2 class="text-2xl font-bold mb-4 border-l-4 border-cyan-400 pl-4">任務 3：執行一筆查詢以產生紀錄</h2>
-            <p class="mb-4 text-gray-400">為了讓我們在 Cloud Logging 中能看到東西，先來執行一筆簡單的查詢。</p>
-            <ol class="list-decimal list-inside space-y-2 pl-4 mb-4 text-gray-300">
-                <li>將以下查詢複製並貼到 BigQuery <strong>查詢編輯器 (Query editor)</strong> 中：</li>
-            </ol>
-            <pre><code>SELECT current_date</code></pre>
-            <ol class="list-decimal list-inside space-y-2 pl-4 mt-4 text-gray-300" start="2">
-                <li>點擊 <strong>RUN</strong>。</li>
-            </ol>
-        </section>
-
-        <hr class="border-gray-700 my-8">
-
-        <section class="mb-12">
-            <h2 class="text-2xl font-bold mb-4 border-l-4 border-cyan-400 pl-4">任務 4：設定從 Cloud Logging 匯出日誌</h2>
-            <p class="mb-4 text-gray-400">現在，我們將設定一個「匯出槽」(Sink)，它會自動把符合條件的日誌從 Cloud Logging 傳送到我們剛建立的 BigQuery 資料集。</p>
-            <div class="space-y-4">
-                <div>
-                    <h3 class="text-xl font-semibold mb-2">1. 前往 Logs Explorer</h3>
-                    <p>在導覽選單中，選擇 <strong>Logging > Logs Explorer</strong>。</p>
-                </div>
-                <div>
-                    <h3 class="text-xl font-semibold mb-2">2. 篩選 BigQuery 日誌</h3>
-                    <ol class="list-decimal list-inside space-y-2 pl-4 text-gray-300">
-                        <li>在 <strong>Resource</strong> 下拉選單中，選擇 <strong>BigQuery</strong>，然後點擊 <strong>Apply</strong>。</li>
-                        <li>點擊右上角的 <strong>Run query</strong>。您應該會看到剛剛執行查詢所產生的日誌。</li>
-                        <li>找到包含 <code>jobservice.jobcompleted</code> 的日誌條目，點擊它，然後選擇 <strong>Show matching entries</strong>。這會自動幫您設定好篩選條件。</li>
-                    </ol>
-                </div>
-                <div>
-                    <h3 class="text-xl font-semibold mb-2">3. 建立匯出槽 (Create Sink)</h3>
-                    <ol class="list-decimal list-inside space-y-2 pl-4 text-gray-300">
-                        <li>在右上角的 <strong>Actions</strong> 下拉選單中，點擊 <strong>Create sink</strong>。</li>
-                        <li><strong>Sink name</strong>: 輸入 <code>JobComplete</code>，然後點擊 <strong>NEXT</strong>。</li>
-                        <li><strong>Select sink service</strong>: 選擇 <strong>BigQuery dataset</strong>。</li>
-                        <li><strong>Select BigQuery dataset (Destination)</strong>: 選擇我們剛剛建立的 <code>bq_logs</code>。</li>
-                        <li>保留其餘設定為預設值，點擊 <strong>Create Sink</strong>。</li>
-                    </ol>
-                </div>
-            </div>
-        </section>
-
-        <hr class="border-gray-700 my-8">
-
-        <section class="mb-12">
-            <h2 class="text-2xl font-bold mb-4 border-l-4 border-cyan-400 pl-4">任務 5：執行範例查詢以填充日誌</h2>
-            <p class="mb-4 text-gray-400">為了讓新的日誌中有資料可供分析，請執行以下幾個查詢。</p>
-            <ol class="list-decimal list-inside space-y-2 pl-4 mb-4 text-gray-300">
-                <li>開啟 <strong>Cloud Shell</strong>。</li>
-                <li>將以下 <code>bq</code> 指令<strong>逐一</strong>複製貼上到 Cloud Shell 中並執行。</li>
-            </ol>
-            <div class="space-y-6">
-                <div>
-                    <h4 class="font-semibold text-lg text-gray-200">查詢一：</h4>
-                    <pre><code>bq query --location=us --use_legacy_sql=false --use_cache=false 'SELECT fullName, AVG(CL.numberOfYears) avgyears FROM `qwiklabs-resources.qlbqsamples.persons_living`, UNNEST(citiesLived) as CL GROUP BY fullname'</code></pre>
-                </div>
-                <div>
-                    <h4 class="font-semibold text-lg text-gray-200">查詢二：</h4>
-                    <pre><code>bq query --location=us --use_legacy_sql=false --use_cache=false 'select month, avg(mean_temp) as avgtemp from `qwiklabs-resources.qlweather_geo.gsod` where station_number = 947680 and year = 2010 group by month order by month'</code></pre>
-                </div>
-                <div>
-                    <h4 class="font-semibold text-lg text-gray-200">查詢三：</h4>
-                    <pre><code>bq query --location=us --use_legacy_sql=false --use_cache=false 'select CONCAT(departure_airport, "-", arrival_airport) as route, count(*) as numberflights from `bigquery-samples.airline_ontime_data.airline_id_codes` ac, `qwiklabs-resources.qlairline_ontime_data.flights` fl where ac.code = fl.airline_code and regexp_contains(ac.airline , r"Alaska") group by 1 order by 2 desc LIMIT 10'</code></pre>
-                </div>
-            </div>
-        </section>
-
-        <hr class="border-gray-700 my-8">
-
-        <section class="mb-12">
-            <h2 class="text-2xl font-bold mb-4 border-l-4 border-cyan-400 pl-4">任務 6：在 BigQuery 中檢視與分析日誌</h2>
-            <p class="mb-4 text-gray-400">日誌已經透過 Sink 進入 BigQuery，現在讓我們來看看成果。</p>
-            <div class="space-y-4">
-                <div>
-                    <h3 class="text-xl font-semibold mb-2">1. 尋找日誌資料表</h3>
-                    <ol class="list-decimal list-inside space-y-2 pl-4 text-gray-300">
-                        <li>回到 <strong>BigQuery</strong> 介面。</li>
-                        <li>在 <strong>Explorer</strong> 面板中，展開您的專案及 <code>bq_logs</code> 資料集。</li>
-                        <li>您會看到一個新建立的資料表，名稱類似 <code>cloudaudit_googleapis_com_data_access_...</code>。</li>
-                        <li class="text-amber-300"><strong>注意：</strong> 日誌是透過串流方式寫入的，所以點擊 <strong>Preview</strong> 可能暫時看不到最新資料，但資料已經可以被查詢。</li>
-                    </ol>
-                </div>
-                <div>
-                    <h3 class="text-xl font-semibold mb-2">2. 建立 VIEW 簡化資料</h3>
-                    <p class="mb-4 text-gray-400">原始的日誌資料表欄位非常多且複雜。為了方便分析，我們建立一個 <strong>VIEW (檢視表)</strong> 來抽取重要欄位並做一些基本計算。</p>
-                    <ol class="list-decimal list-inside space-y-2 pl-4 mb-4 text-gray-300">
-                        <li>點擊 <strong>+ (Compose new query)</strong>，貼上並執行以下 SQL：</li>
-                    </ol>
-                    <div class="bg-yellow-900/30 border border-yellow-600 text-yellow-300 px-4 py-3 rounded-lg relative mb-4" role="alert">
-                      <strong class="font-bold">⚠️ 重要提示：</strong>
-                      <span class="block sm:inline">請務必將 <code>Project ID</code> 替換為您實驗室的<strong>實際專案 ID</strong>。</span>
+            <!-- Slide 1: BigQuery 架構與定位 -->
+            <section id="slide1" class="card p-6 md:p-8">
+                <h2 class="text-2xl font-bold mb-6 text-gray-900 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4M4 7v5c0 2.21 3.582 4 8 4s8-1.79 8-4V7"/></svg>1. BigQuery 架構與定位</h2>
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="text-xl font-semibold mb-2">BigQuery 是什麼？</h3>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li><strong class="text-gray-800">雲端原生資料倉儲：</strong> 支援無伺服器 (Serverless)、分散式查詢引擎。</li>
+                            <li><strong class="text-gray-800">Dremel 架構：</strong> 運行於 Google Dremel 技術，具備無與倫比的高效平行查詢能力。</li>
+                            <li><strong class="text-gray-800">自動資源管理：</strong> 自動處理擴展、負載平衡與容錯，讓您專注於分析。</li>
+                        </ul>
                     </div>
-                    <pre><code class="language-sql">CREATE OR REPLACE VIEW
-  bq_logs.v_querylogs AS
-SELECT
-  resource.labels.project_id,
-  protopayload_auditlog.authenticationInfo.principalEmail,
-  protopayload_auditlog.servicedata_v1_bigquery.jobCompletedEvent.job.jobConfiguration.query.query,
-  protopayload_auditlog.servicedata_v1_bigquery.jobCompletedEvent.job.jobConfiguration.query.statementType,
-  protopayload_auditlog.servicedata_v1_bigquery.jobCompletedEvent.job.jobStatus.error.message,
-  protopayload_auditlog.servicedata_v1_bigquery.jobCompletedEvent.job.jobStatistics.startTime,
-  protopayload_auditlog.servicedata_v1_bigquery.jobCompletedEvent.job.jobStatistics.endTime,
-  TIMESTAMP_DIFF(protopayload_auditlog.servicedata_v1_bigquery.jobCompletedEvent.job.jobStatistics.endTime, protopayload_auditlog.servicedata_v1_bigquery.jobCompletedEvent.job.jobStatistics.startTime, MILLISECOND)/1000 AS run_seconds,
-  protopayload_auditlog.servicedata_v1_bigquery.jobCompletedEvent.job.jobStatistics.totalProcessedBytes,
-  protopayload_auditlog.servicedata_v1_bigquery.jobCompletedEvent.job.jobStatistics.totalSlotMs,
-  ARRAY(SELECT as STRUCT datasetid, tableId FROM UNNEST(protopayload_auditlog.servicedata_v1_bigquery.jobCompletedEvent.job.jobStatistics.referencedTables)) as tables_ref,
-  protopayload_auditlog.servicedata_v1_bigquery.jobCompletedEvent.job.jobStatistics.totalTablesProcessed,
-  protopayload_auditlog.servicedata_v1_bigquery.jobCompletedEvent.job.jobStatistics.queryOutputRowCount,
-  severity
-FROM
-  `Project ID.bq_logs.cloudaudit_googleapis_com_data_access_*`
-ORDER BY
-  startTime</code></pre>
+                    <div>
+                        <h3 class="text-xl font-semibold mb-4">與 Cloud SQL for PostgreSQL 的比較</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="p-3 font-semibold border-b-2 border-gray-200">項目</th>
+                                        <th class="p-3 font-semibold border-b-2 border-gray-200">BigQuery (OLAP)</th>
+                                        <th class="p-3 font-semibold border-b-2 border-gray-200">Cloud SQL (OLTP)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b border-gray-200 hover:bg-gray-50">
+                                        <td class="p-3 font-medium">適用場景</td>
+                                        <td class="p-3">大量資料分析、報表、AI/ML</td>
+                                        <td class="p-3">應用程式後端、交易處理</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-200 hover:bg-gray-50">
+                                        <td class="p-3 font-medium">儲存與運算</td>
+                                        <td class="p-3">分離 (高效能關鍵)</td>
+                                        <td class="p-3">整合</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-200 hover:bg-gray-50">
+                                        <td class="p-3 font-medium">查詢延遲</td>
+                                        <td class="p-3">秒級 (批次/互動查詢)</td>
+                                        <td class="p-3">毫秒級 (交易/查詢)</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-200 hover:bg-gray-50">
+                                        <td class="p-3 font-medium">資料大小</td>
+                                        <td class="p-3">TB～PB 級</td>
+                                        <td class="p-3">GB～TB 級</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-3 font-medium">維護</td>
+                                        <td class="p-3">全自動化，無需管理</td>
+                                        <td class="p-3">需手動管理實例、備援</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-4 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+                            <p class="font-semibold text-blue-800">核心結論</p>
+                            <p class="text-blue-700">簡單來說，當您需要對海量歷史資料進行複雜分析時，選擇 BigQuery；當您的應用程式需要快速讀寫單筆資料時，選擇 Cloud SQL。</p>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <h3 class="text-xl font-semibold mb-2">3. 查詢 VIEW</h3>
-                    <p class="mb-4 text-gray-400">現在，您可以像查詢一般資料表一樣，查詢這個 <code>v_querylogs</code> 檢視表了。撰寫一個新查詢並執行：</p>
-                    <pre><code>SELECT * FROM bq_logs.v_querylogs</code></pre>
-                    <p class="mt-4 text-gray-300">在查詢結果中，您可以看到被整理過的日誌，包含執行者、查詢語句、開始與結束時間、執行秒數等實用資訊。</p>
-                </div>
-            </div>
-        </section>
+            </section>
+            
+            <!-- Separator -->
+            <hr class="border-dashed">
 
-        <footer class="text-center mt-12 py-6 border-t border-gray-700">
-            <p class="text-lg font-semibold text-green-400">恭喜您！🎉</p>
-            <p class="text-gray-400">您已成功建立一個自動化的 BigQuery 使用情況分析流程。</p>
+            <!-- Slide 3-5: Analytics & SQL -->
+            <section id="slide3" class="card p-6 md:p-8">
+                <h2 class="text-2xl font-bold mb-6 text-gray-900 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>2. 大規模資料分析與 SQL</h2>
+                
+                <div id="slide4" class="mb-6">
+                    <h3 class="text-xl font-semibold mb-2 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>無伺服器架構</h3>
+                    <p class="mb-4 text-gray-700">BigQuery 會自動處理資源擴展、系統修補與底層維護。您完全無需擔心基礎設施的管理，可以將所有精力投入到資料價值發掘中。</p>
+                    <p class="text-gray-700"><strong>情境範例：</strong> 就像使用家裡的電力一樣，您只需打開開關（提交查詢），電力公司（Google）就會確保有足夠的電力供應，您完全不用關心發電廠如何運作。即使全城市的人在同一時間用電，系統也能應付自如。</p>
+                </div>
+
+                <div id="slide5">
+                    <h3 class="text-xl font-semibold mb-2 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>SQL 支援</h3>
+                    <p class="mb-4 text-gray-700">完整支援 ANSI Standard SQL，讓具備 SQL 技能的分析師與工程師可以無痛上手。透過標準 ODBC/JDBC 驅動程式，可以輕鬆與各種 BI 工具和應用程式整合。</p>
+                    <p class="mb-2 text-gray-700"><strong>範例：</strong> 查詢一週內前 10 名熱銷商品。</p>
+                    <div class="code-block-container">
+                        <div class="code-block-header">
+                            <span class="code-block-title">SQL</span>
+                            <button class="copy-button" onclick="copyCode(this)">複製</button>
+                        </div>
+                        <div class="code-block">
+<pre><code>SELECT
+    product_id,
+    SUM(amount) AS total_sales
+FROM
+    `transactions`
+WHERE
+    transaction_date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) AND CURRENT_DATE()
+GROUP BY
+    product_id
+ORDER BY
+    total_sales DESC
+LIMIT 10;</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 6: 資料載入與串流 -->
+            <section id="slide6" class="card p-6 md:p-8">
+                <h2 class="text-2xl font-bold mb-6 text-gray-900 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>3. 資料載入與串流</h2>
+                <p class="mb-6 text-gray-700">提供彈性的資料匯入方式，支援批次載入與即時串流插入，滿足不同業務需求。</p>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="font-semibold text-lg mb-2">批次載入</h4>
+                        <p class="text-gray-600 mb-2">使用 `bq` 命令列工具，從 Cloud Storage 快速載入大量檔案。</p>
+                        <div class="code-block-container">
+                            <div class="code-block-header"><span class="code-block-title">Bash</span><button class="copy-button" onclick="copyCode(this)">複製</button></div>
+                            <div class="code-block"><pre><code># 從 GCS 載入 JSON 檔案
+bq load --source_format=NEWLINE_DELIMITED_JSON \
+project:dataset.table \
+gs://my-bucket/data.json</code></pre></div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-lg mb-2">串流插入</h4>
+                        <p class="text-gray-600 mb-2">透過 API 將事件資料即時寫入，實現零延遲分析。</p>
+                        <div class="code-block-container">
+                             <div class="code-block-header"><span class="code-block-title">Python</span><button class="copy-button" onclick="copyCode(this)">複製</button></div>
+                            <div class="code-block"><pre><code>from google.cloud import bigquery
+client = bigquery.Client()
+table_id = "project.dataset.table"
+rows = [{"user_id": "abc123", "event": "click"}]
+errors = client.insert_rows_json(table_id, rows)
+assert not errors, "Errors occurred."</code></pre></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Separator -->
+            <hr class="border-dashed">
+
+            <!-- Data Management -->
+            <section id="datamanagement" class="card p-6 md:p-8">
+                <h2 class="text-2xl font-bold mb-6 text-gray-900 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>4. 資料管理與保護</h2>
+                <div class="space-y-8">
+                    <div>
+                        <h3 class="text-xl font-semibold mb-2">資料誤刪回復 (時間旅行 Time Travel)</h3>
+                        <p class="mb-4 text-gray-700">BigQuery 會自動為您的資料表保留 7 天的歷史版本。這意味著您可以在不做任何事前設定的情況下，查詢或回復過去 7 天內任何時間點的資料，是防止人為誤刪或誤改的救命法寶。</p>
+                        <p class="mb-2 text-gray-700"><strong>情境範例：</strong>一位工程師在週五下午不小心執行了 `DELETE FROM transactions;` 指令。藉由時間旅行，您可以在週一輕鬆地將 `transactions` 表回復到執行刪除指令前的狀態。</p>
+                        <div class="code-block-container">
+                            <div class="code-block-header"><span class="code-block-title">SQL</span><button class="copy-button" onclick="copyCode(this)">複製</button></div>
+                            <div class="code-block"><pre><code>-- 查詢一小時前的資料表狀態
+SELECT * FROM `my_project.my_dataset.transactions`
+FOR SYSTEM_TIME AS OF TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR);
+
+-- 建立新資料表來回復誤刪的資料
+CREATE TABLE `my_project.my_dataset.transactions_restored` AS
+SELECT * FROM `my_project.my_dataset.transactions`
+FOR SYSTEM_TIME AS OF '2025-07-11 16:00:00-05:00';</code></pre></div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold mb-2">資料表快照 (Table Snapshot)</h3>
+                        <p class="mb-4 text-gray-700">若您需要將特定時間點的資料保留超過 7 天（例如為了稽核或季度備份），可以使用資料表快照功能。快照是一個輕量級、唯讀的資料表複本，儲存成本遠低於完整複製一份資料表。</p>
+                        <p class="mb-2 text-gray-700"><strong>情境範例：</strong>在每季財報結算後，為重要的財務資料表建立快照，以確保這些數據被永久保存下來，供未來查核，且不會因後續的資料變動而受影響。</p>
+                        <div class="code-block-container">
+                            <div class="code-block-header"><span class="code-block-title">SQL</span><button class="copy-button" onclick="copyCode(this)">複製</button></div>
+                            <div class="code-block"><pre><code>-- 為 `financial_reports` 表建立一個名為 `q2_2025_snapshot` 的快照
+CREATE SNAPSHOT TABLE `my_project.my_dataset.q2_2025_snapshot`
+CLONE `my_project.my_dataset.financial_reports`;
+
+-- 查詢快照資料
+SELECT * FROM `my_project.my_dataset.q2_2025_snapshot`;</code></pre></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Separator -->
+            <hr class="border-dashed">
+
+            <!-- Slide 7-11: Performance Optimization -->
+            <section id="slide7" class="card p-6 md:p-8">
+                <h2 class="text-2xl font-bold mb-6 text-gray-900 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>5. 查詢效能最佳化</h2>
+                <div class="space-y-8">
+                    <!-- Partitioned Table -->
+                    <div>
+                        <h3 class="text-xl font-semibold mb-2">分區表 (Partitioned Table)</h3>
+                        <p class="mb-4 text-gray-700">將資料表依時間欄位進行分區。查詢時若指定時間範圍，BigQuery 只會掃描相關分區，大幅提升效能並降低成本。</p>
+                        <div class="code-block-container">
+                            <div class="code-block-header"><span class="code-block-title">SQL</span><button class="copy-button" onclick="copyCode(this)">複製</button></div>
+                            <div class="code-block"><pre><code>-- 查詢特定分區 (高效能、低成本)
+SELECT * FROM `my_project.my_dataset.events_partitioned`
+WHERE _PARTITIONTIME = '2025-07-10';</code></pre></div>
+                        </div>
+                    </div>
+                    <!-- Clustered Table -->
+                    <div id="slide8">
+                        <h3 class="text-xl font-semibold mb-2">叢集表 (Clustered Table)</h3>
+                        <p class="mb-4 text-gray-700">在分區的基礎上，可再根據經常篩選的欄位對資料進行叢集（排序儲存）。這能有效減少掃描量，進一步加速查詢。</p>
+                        <p class="mb-2 text-gray-700"><strong>情境範例：</strong> 當您查詢特定商店 (`store_id`) 的銷售資料時，因為資料已按 `store_id` 排序好，BigQuery 可以快速定位到相關區塊，而無需掃描整個分區。</p>
+                        <div class="code-block-container">
+                            <div class="code-block-header"><span class="code-block-title">SQL</span><button class="copy-button" onclick="copyCode(this)">複製</button></div>
+                            <div class="code-block"><pre><code>-- 建立分區且叢集的表
+CREATE TABLE `my_project.my_dataset.sales_data`
+PARTITION BY DATE(transaction_date)
+CLUSTER BY store_id, product_id
+AS SELECT * FROM `my_project.my_dataset.raw_sales`;
+
+-- 這個查詢會因為叢集而變得非常快
+SELECT * FROM `my_project.my_dataset.sales_data`
+WHERE store_id = 'STORE-A01';</code></pre></div>
+                        </div>
+                    </div>
+                    <!-- Nested Fields -->
+                    <div id="slide9">
+                        <h3 class="text-xl font-semibold mb-2">非正規化與巢狀欄位</h3>
+                        <p class="mb-4 text-gray-700">將關聯資料（如訂單中的多個商品）儲存在同一行內，可大幅減少昂貴的 JOIN 操作，顯著提升查詢效能。</p>
+                        <div class="code-block-container">
+                            <div class="code-block-header"><span class="code-block-title">SQL</span><button class="copy-button" onclick="copyCode(this)">複製</button></div>
+                            <div class="code-block"><pre><code>-- `carts` 表有一個名為 `cart` 的 ARRAY&lt;STRUCT&lt;...&gt;&gt; 欄位
+SELECT user_id, item.product_id, item.qty
+FROM `my_project.my_dataset.carts`, UNNEST(cart) AS item;</code></pre></div>
+                        </div>
+                    </div>
+                    <!-- Materialized View -->
+                    <div id="slide10">
+                        <h3 class="text-xl font-semibold mb-2">物化檢視表 (Materialized View)</h3>
+                        <p class="mb-4 text-gray-700">對於經常重複執行的查詢，建立物化檢視表來預先計算並儲存結果。讓儀表板和報表的載入速度得到飛躍性提升。</p>
+                        <div class="code-block-container">
+                             <div class="code-block-header"><span class="code-block-title">SQL</span><button class="copy-button" onclick="copyCode(this)">複製</button></div>
+                            <div class="code-block"><pre><code>-- 建立每小時銷售總額的物化檢視表
+CREATE MATERIALIZED VIEW `my_project.my_dataset.mv_hourly_sales` AS
+SELECT product_id, TIMESTAMP_TRUNC(transaction_time, HOUR) AS hour, SUM(amount) AS total_sales
+FROM `my_project.my_dataset.transactions`
+GROUP BY product_id, hour;</code></pre></div>
+                        </div>
+                    </div>
+                     <!-- BI Engine -->
+                    <div id="slide11">
+                        <h3 class="text-xl font-semibold mb-2">BI Engine</h3>
+                        <p class="mb-4 text-gray-700">一個超高速的記憶體內分析引擎，專為提供亞秒級的即時查詢回應而設計。它能將常用資料快取在記憶體中，大幅降低查詢延遲。</p>
+                        <div class="bg-gray-100 p-6 rounded-lg flex items-center space-x-6">
+                            <div class="text-center">
+                                <p class="text-4xl font-bold text-green-500">0.2s</p>
+                                <p class="text-sm text-gray-600">儀表板回應時間</p>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-800">情境範例：Looker Studio 即時儀表板</p>
+                                <p class="text-gray-600">當您在 Looker Studio 儀表板上篩選日期或產品類別時，BI Engine 能讓圖表幾乎在瞬間完成重繪，提供如絲般滑順的互動體驗，而不是看著轉圈圈的載入圖示。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Separator -->
+            <hr class="border-dashed">
+
+            <!-- Slide 12: Cost -->
+            <section id="slide12" class="card p-6 md:p-8">
+                <h2 class="text-2xl font-bold mb-6 text-gray-900 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v.01" /></svg>6. 成本效益</h2>
+                <p class="mb-4 text-gray-700">在預設的按用量計費模式下，費用取決於查詢處理的資料量。透過善用分區、叢集以及在查詢中只選擇必要欄位，可以精準控制成本。</p>
+                <div class="code-block-container">
+                    <div class="code-block-header"><span class="code-block-title">SQL</span><button class="copy-button" onclick="copyCode(this)">複製</button></div>
+                    <div class="code-block"><pre><code>-- 錯誤示範 (掃描所有欄位)
+SELECT * FROM `my_project.my_dataset.sales_partitioned`
+WHERE transaction_date >= '2025-07-01';
+
+-- 正確示範 (只選取必要欄位，大幅降低掃描量)
+SELECT product_id, total_sales
+FROM `my_project.my_dataset.sales_partitioned`
+WHERE transaction_date >= '2025-07-01';</code></pre></div>
+                </div>
+            </section>
+
+            <!-- Slide 13: Slot Reservations -->
+            <section id="slide13" class="card p-6 md:p-8">
+                <h2 class="text-2xl font-bold mb-6 text-gray-900 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 011-1h1a2 2 0 100-4H7a1 1 0 01-1-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" /></svg>7. Slot Reservations (插槽預留)</h2>
+                <p class="mb-6 text-gray-700">透過預留專屬的運算資源 (Slot)，企業可以獲得可預測的穩定效能與成本控制，特別適合高負載或關鍵業務場景。</p>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="space-y-6">
+                        <div>
+                            <h4 class="font-semibold text-lg">Slot 是什麼？</h4>
+                            <p class="text-gray-600">Slot 是 BigQuery 的運算單位（CPU+記憶體+網路）。查詢會被切分成多個子工作，由多個 slot 同時平行處理。</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg">Slot 運作方式</h4>
+                             <ul class="list-disc list-inside text-gray-600 space-y-1">
+                                <li><strong>On-demand：</strong> 依掃描資料量計費，彈性高。</li>
+                                <li><strong>Reservation：</strong> 預約固定數量 slot，支付固定費用，成本可預測。</li>
+                            </ul>
+                        </div>
+                         <div>
+                            <h4 class="font-semibold text-lg">Flex Slots (彈性插槽)</h4>
+                            <p class="text-gray-600">最短租期僅為 <strong>60 秒</strong>，非常適合應對臨時的爆量查詢，如月底結算或分析病毒式行銷活動的數據。</p>
+                        </div>
+                    </div>
+                    <div class="bg-gray-100 p-6 rounded-lg">
+                        <h4 class="font-semibold text-lg mb-2">適用場景</h4>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li><strong>每日定時報表：</strong> 確保財務、營運等關鍵報表能準時產出。</li>
+                            <li><strong>高併發儀表板：</strong> 讓全公司數百人能同時流暢使用 BI 儀表板。</li>
+                            <li><strong>大量 ETL 任務：</strong> 在可預期的時間內完成大規模資料轉換。</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Separator -->
+            <hr class="border-dashed">
+
+            <!-- Slide 14: BigQuery ML -->
+            <section id="biml" class="card p-6 md:p-8">
+                <h2 class="text-2xl font-bold mb-6 text-gray-900 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    8. BigQuery ML: 在 SQL 中實現機器學習
+                </h2>
+                <p class="mb-4 text-gray-700">BigQuery ML (BQML) 是一項革命性功能，它讓資料分析師與科學家能直接使用 SQL 語法，在 BigQuery 內部建立並執行機器學習模型。您無需將資料匯出到其他平台，也無需具備複雜的程式設計背景，就能實現預測分析。</p>
+                <div class="grid md:grid-cols-2 gap-8 items-start">
+                    <div class="space-y-6">
+                        <div>
+                            <h4 class="font-semibold text-lg mb-2">核心優勢</h4>
+                            <ul class="list-disc list-inside space-y-2 text-gray-600">
+                                <li><strong class="text-gray-800">降低門檻：</strong> 使用熟悉的 SQL 即可訓練模型，無需學習 Python 或 ML 框架。</li>
+                                <li><strong class="text-gray-800">提升效率：</strong> 資料無需移動，直接在來源地進行訓練，大幅縮短開發週期。</li>
+                                <li><strong class="text-gray-800">整合應用：</strong> 訓練好的模型可立即用於查詢，實現即時預測。</li>
+                            </ul>
+                        </div>
+                        <div class="bg-blue-50 border-l-4 border-blue-400 rounded-r-lg p-4">
+                            <p class="font-semibold text-blue-800">情境範例</p>
+                            <p class="text-blue-700">一家電商公司想預測哪些顧客可能會流失。他們可以直接在儲存顧客行為的 BigQuery 資料表上，使用 BQML 建立一個羅吉斯迴歸模型來預測流失機率，而無需資料工程師的協助。</p>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="mb-2 text-gray-700"><strong>範例：</strong> 建立一個線性迴歸模型來預測每日銷售額。</p>
+                        <div class="code-block-container">
+                            <div class="code-block-header">
+                                <span class="code-block-title">SQL</span>
+                                <button class="copy-button" onclick="copyCode(this)">複製</button>
+                            </div>
+                            <div class="code-block">
+<pre><code>CREATE OR REPLACE MODEL `my_dataset.daily_sales_model`
+OPTIONS(model_type='LINEAR_REG') AS
+SELECT
+    DATE(transaction_date) AS sales_date,
+    SUM(amount) AS label -- 'label' 是我們要預測的目標
+FROM
+    `my_dataset.transactions`
+GROUP BY
+    sales_date;
+
+-- 使用模型進行預測
+SELECT
+  *
+FROM
+  ML.PREDICT(MODEL `my_dataset.daily_sales_model`,
+    (SELECT
+      DATE('2025-07-15') AS sales_date)
+  );</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+        <footer class="text-center mt-16 py-6 border-t border-gray-200">
+            <p class="text-gray-500">網頁內容由 Gemini 根據提供資料生成。</p>
         </footer>
 
     </div>
-
+    
     <script>
-        // 初始化 Mermaid.js
-        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
-
-        // 為所有 <pre> 區塊加上複製按鈕
-        document.querySelectorAll('pre').forEach(pre => {
-            const code = pre.querySelector('code');
-            if (code) {
-                const button = document.createElement('button');
-                button.innerText = '複製';
-                button.className = 'copy-btn';
-                
-                button.addEventListener('click', () => {
-                    const textToCopy = code.innerText;
-                    
-                    // 使用 Clipboard API
-                    navigator.clipboard.writeText(textToCopy).then(() => {
-                        button.innerText = '已複製!';
-                        setTimeout(() => {
-                            button.innerText = '複製';
-                        }, 2000);
-                    }).catch(err => {
-                        console.error('無法複製文字: ', err);
-                        // 備用方法
-                        const textArea = document.createElement('textarea');
-                        textArea.value = textToCopy;
-                        document.body.appendChild(textArea);
-                        textArea.select();
-                        try {
-                            document.execCommand('copy');
-                            button.innerText = '已複製!';
-                            setTimeout(() => {
-                                button.innerText = '複製';
-                            }, 2000);
-                        } catch (e) {
-                            button.innerText = '失敗';
-                        }
-                        document.body.removeChild(textArea);
-                    });
-                });
-                
-                pre.appendChild(button);
+        function copyCode(button) {
+            const codeBlock = button.closest('.code-block-container').querySelector('pre');
+            const code = codeBlock.innerText;
+            
+            // Using execCommand for broader compatibility within iFrames
+            const textarea = document.createElement('textarea');
+            textarea.value = code;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                button.innerText = '已複製!';
+                setTimeout(() => {
+                    button.innerText = '複製';
+                }, 2000);
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+                button.innerText = '複製失敗';
             }
+            document.body.removeChild(textarea);
+        }
+
+        // Active nav link highlighting on scroll
+        const sections = document.querySelectorAll('section[id]');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const activeId = entry.target.id;
+                    navLinks.forEach(link => {
+                        link.classList.remove('active');
+                        // Check if the link's href corresponds to any of the sections within the current entry's section group
+                        // This handles cases where multiple sections are logically grouped under one nav link
+                        let linkId = link.getAttribute('href').substring(1);
+                        if (linkId === 'slide3') linkId = 'slide5'; // Grouping slide 3, 4, 5 under '分析'
+                        if (linkId === 'slide7') linkId = 'slide11'; // Grouping slide 7-11 under '效能'
+                        
+                        let currentSectionId = activeId;
+                        if (['slide3', 'slide4', 'slide5'].includes(currentSectionId)) currentSectionId = 'slide5';
+                        if (['slide7', 'slide8', 'slide9', 'slide10', 'slide11'].includes(currentSectionId)) currentSectionId = 'slide11';
+
+                        if (link.getAttribute('href').substring(1) === activeId) {
+                             link.classList.add('active');
+                        }
+                    });
+
+                    // Manually activate the correct nav link based on the intersecting section ID
+                    let activeLink = document.querySelector(`.nav-link[href="#${entry.target.id}"]`);
+                    if (activeLink) {
+                         activeLink.classList.add('active');
+                    }
+                }
+            });
+        }, { rootMargin: '-40% 0px -60% 0px' }); // Adjusted rootMargin for better activation
+
+        sections.forEach(section => {
+            observer.observe(section);
         });
     </script>
 
